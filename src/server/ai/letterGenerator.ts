@@ -35,6 +35,10 @@ export async function generateLetter(params: GenerateLetterParams): Promise<Lett
 
     const content = response.choices[0]?.message?.content ?? ''
 
+    if (!content || content.trim().length === 0) {
+      throw new Error('Generated letter is empty')
+    }
+
     return {
       content,
       tone: params.tone,

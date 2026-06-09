@@ -27,7 +27,7 @@ describe('generateLetter', () => {
           },
         },
       ],
-    } as any)
+    } as unknown as Awaited<ReturnType<typeof mockedCreate>>)
 
     const result = await generateLetter({
       deceasedName: '父亲',
@@ -60,5 +60,30 @@ describe('generateLetter', () => {
         tone: '温柔',
       })
     ).rejects.toThrow('Failed to generate letter')
+  })
+
+  test('works without currentContext', async () => {
+    const mockLetter = '亲爱的女儿，\n\n愿你每天都开心。'
+
+    mockedCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: mockLetter,
+          },
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof mockedCreate>>)
+
+    const result = await generateLetter({
+      deceasedName: '母亲',
+      relationship: '母女',
+      personalityJson: '{"tone": "gentle"}',
+      tone: '温柔',
+    })
+
+    expect(result.content).toBe(mockLetter)
+    expect(result.tone).toBe('温柔')
+    expect(result.realityAnchor).toBe('这封信来自AI对母亲的记忆重建')
   })
 })
