@@ -101,16 +101,29 @@ export const letterRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.prisma.letter.updateMany({
+      const letter = await ctx.prisma.letter.findFirst({
         where: {
           id: input.id,
           userId: ctx.session.user.id,
+        },
+      })
+
+      if (!letter) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Letter not found',
+        })
+      }
+
+      const updated = await ctx.prisma.letter.update({
+        where: {
+          id: input.id,
         },
         data: {
           status: input.status,
         },
       })
 
-      return { count: result.count }
+      return updated
     }),
 })

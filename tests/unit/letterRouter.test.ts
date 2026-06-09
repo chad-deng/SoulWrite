@@ -1,12 +1,14 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { vi } from 'vitest'
+
+vi.mock('@/server/db', () => ({
+  prisma: {},
+}))
+
+import { describe, test, expect, beforeEach } from 'vitest'
 import { TRPCError } from '@trpc/server'
 
 vi.mock('@/server/ai/letterGenerator', () => ({
   generateLetter: vi.fn(),
-}))
-
-vi.mock('@/server/db', () => ({
-  prisma: {},
 }))
 
 vi.mock('@/server/auth', () => ({
@@ -29,6 +31,7 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       findMany: vi.fn(),
       findFirst: vi.fn(),
       updateMany: vi.fn(),
+      update: vi.fn(),
       ...((overrides.letter as Record<string, unknown>) || {}),
     },
   }
@@ -280,8 +283,29 @@ describe('letterRouter', () => {
 
   describe('updateStatus', () => {
     test('updates letter status for user', async () => {
+      const mockLetter = {
+        id: 'letter-1',
+        userId: 'user-123',
+        soulProfileId: 'profile-1',
+        type: 'soul_letter',
+        content: 'letter content',
+        tone: 'comforting',
+        realityAnchor: 'anchor',
+        status: 'draft',
+        scheduledFor: null,
+        deliveredAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      const mockUpdatedLetter = {
+        ...mockLetter,
+        status: 'approved',
+      }
+
       const prisma = createMockPrisma()
-      prisma.letter.updateMany.mockResolvedValue({ count: 1 })
+      prisma.letter.findFirst.mockResolvedValue(mockLetter)
+      prisma.letter.update.mockResolvedValue(mockUpdatedLetter)
 
       const ctx = createMockContext()
       ctx.prisma = prisma as unknown as typeof ctx.prisma
@@ -292,33 +316,40 @@ describe('letterRouter', () => {
         status: 'approved',
       })
 
-      expect(prisma.letter.updateMany).toHaveBeenCalledWith({
+      expect(prisma.letter.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'letter-1',
           userId: 'user-123',
+        },
+      })
+
+      expect(prisma.letter.update).toHaveBeenCalledWith({
+        where: {
+          id: 'letter-1',
         },
         data: {
           status: 'approved',
         },
       })
 
-      expect(result).toEqual({ count: 1 })
+      expect(result).toEqual(mockUpdatedLetter)
     })
 
-    test('returns zero count when letter not found', async () => {
+    test('throws NOT_FOUND when letter not found', async () => {
       const prisma = createMockPrisma()
-      prisma.letter.updateMany.mockResolvedValue({ count: 0 })
+      prisma.letter.findFirst.mockResolvedValue(null)
 
       const ctx = createMockContext()
       ctx.prisma = prisma as unknown as typeof ctx.prisma
 
       const caller = letterRouter.createCaller(ctx)
-      const result = await caller.updateStatus({
-        id: 'nonexistent',
-        status: 'approved',
-      })
 
-      expect(result).toEqual({ count: 0 })
+      await expect(
+        caller.updateStatus({
+          id: 'nonexistent',
+          status: 'approved',
+        })
+      ).rejects.toThrow(TRPCError)
     })
   })
 })
