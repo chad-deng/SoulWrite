@@ -1,11 +1,14 @@
 import { initTRPC, TRPCError } from '@trpc/server'
+import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch'
 import superjson from 'superjson'
 import { ZodError } from 'zod'
+import { getServerSession } from 'next-auth/next'
 
+import { authOptions } from '@/server/auth'
 import { prisma } from '@/server/db'
 
 interface Session {
-  user?: {
+  user: {
     id: string
     email?: string | null
     name?: string | null
@@ -24,12 +27,20 @@ export async function createContextInner(opts: CreateContextOptions) {
   }
 }
 
-export async function createContext() {
-  // Placeholder session until NextAuth is fully configured in Task 4
-  const session: Session | null = null
+export async function createContext(_opts: FetchCreateContextFnOptions) {
+  const session = await getServerSession(authOptions)
 
   return createContextInner({
-    session,
+    session: session
+      ? {
+          user: {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image,
+          },
+        }
+      : null,
   })
 }
 

@@ -9,7 +9,7 @@ const handler = (req: NextRequest) =>
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: () => createContext(),
+    createContext,
   })
 
 export { handler as GET, handler as POST }
