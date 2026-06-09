@@ -17,9 +17,6 @@ export const soulProfileRouter = createTRPCRouter({
           userId: ctx.session.user.id,
           name: input.name,
           relationship: input.relationship,
-          personalityJson: '{}',
-          memoriesJson: '{}',
-          toneStyle: '',
         },
       })
 
@@ -69,8 +66,12 @@ export const soulProfileRouter = createTRPCRouter({
         id: z.string(),
         name: z.string().min(1).max(100).optional(),
         relationship: z.string().min(1).max(50).optional(),
-        personalityJson: z.string().optional(),
-        memoriesJson: z.string().optional(),
+        personalityJson: z.string().refine((s) => {
+          try { JSON.parse(s); return true } catch { return false }
+        }, { message: 'Must be valid JSON' }).optional(),
+        memoriesJson: z.string().refine((s) => {
+          try { JSON.parse(s); return true } catch { return false }
+        }, { message: 'Must be valid JSON' }).optional(),
         toneStyle: z.string().optional(),
         isActive: z.boolean().optional(),
       })
@@ -93,8 +94,8 @@ export const soulProfileRouter = createTRPCRouter({
         })
       }
 
-      const updatedProfile = await ctx.prisma.soulProfile.findUnique({
-        where: { id },
+      const updatedProfile = await ctx.prisma.soulProfile.findFirst({
+        where: { id, userId: ctx.session.user.id },
       })
 
       return updatedProfile
