@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  soulProfiles  SoulProfile[]
+  letters       Letter[]
+  futureLetters FutureLetter[]
+  subscription  Subscription?
+
+  @@index([email])
+}
+
+model SoulProfile {
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  relationship    String
+  personalityJson String    @db.Text
+  memoriesJson    String    @db.Text
+  toneStyle       String
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploads  Upload[]
+  letters  Letter[]
+  schedules Schedule[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Upload {
+  id            String   @id @default(cuid())
+  soulProfileId String
+  type          String
+  filename      String
+  content       String   @db.Text
+  metadataJson  String   @db.Text
+  createdAt     DateTime @default(now())
+
+  soulProfile SoulProfile @relation(fields: [soulProfileId], references: [id], onDelete: Cascade)
+
+  @@index([soulProfileId])
+  @@index([type])
+}
+
+model Letter {
+  id            String    @id @default(cuid())
+  userId        String
+  soulProfileId String
+  type          String
+  content       String    @db.Text
+  tone          String
+  realityAnchor String    @db.Text
+  status        String    @default("draft")
+  scheduledFor  DateTime?
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  soulProfile SoulProfile @relation(fields: [soulProfileId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([soulProfileId])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+model Schedule {
+  id            String    @id @default(cuid())
+  soulProfileId String
+  frequency     String
+  dayOfWeek     Int?
+  dayOfMonth    Int?
+  specialDate   DateTime?
+  nextRunAt     DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  soulProfile SoulProfile @relation(fields: [soulProfileId], references: [id], onDelete: Cascade)
+
+  @@index([soulProfileId])
+  @@index([isActive])
+  @@index([nextRunAt])
+}
+
+model FutureLetter {
+  id          String    @id @default(cuid())
+  userId      String
+  content     String    @db.Text
+  deliverAt   DateTime
+  isDelivered Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deliverAt])
+  @@index([isDelivered])
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  tier        String
+  stripeSubId String    @unique
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeSubId])
+}
