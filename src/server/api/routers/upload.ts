@@ -4,7 +4,7 @@ import { TRPCError } from '@trpc/server'
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
 import { extractPersonality } from '@/server/ai/personalityExtractor'
 
-const TEXT_EXTRACTION_TYPES: readonly string[] = ['chat_log', 'text', 'audio_transcript']
+const TEXT_EXTRACTION_TYPES = ['chat_log', 'text', 'audio_transcript'] as const
 
 export const uploadRouter = createTRPCRouter({
   create: protectedProcedure
@@ -14,7 +14,9 @@ export const uploadRouter = createTRPCRouter({
         type: z.enum(['chat_log', 'photo', 'text', 'audio_transcript']),
         filename: z.string(),
         content: z.string().max(500000),
-        metadataJson: z.string().optional(),
+        metadataJson: z.string().refine((s) => {
+          try { JSON.parse(s); return true } catch { return false }
+        }, { message: 'Must be valid JSON' }).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -42,14 +44,48 @@ export const uploadRouter = createTRPCRouter({
         },
       })
 
-      if (TEXT_EXTRACTION_TYPES.includes(input.type)) {
+      if (TEXT_EXTRACTION_TYPES.includes(input.type as (typeof TEXT_EXTRACTION_TYPES)[number])) {
         try {
           const extracted = await extractPersonality(profile.name, input.content)
+
+          const existing = profile.personalityJson
+            ? (JSON.parse(profile.personalityJson) as Record<string, unknown>)
+            : {}
+
+          const merged = {
+            ...existing,
+            ...extracted,
+            commonPhrases: Array.from(
+              new Set([
+                ...((existing.commonPhrases as string[]) ?? []),
+                ...(extracted.commonPhrases ?? []),
+              ])
+            ),
+            frequentTopics: Array.from(
+              new Set([
+                ...((existing.frequentTopics as string[]) ?? []),
+                ...(extracted.frequentTopics ?? []),
+              ])
+            ),
+            values: Array.from(
+              new Set([
+                ...((existing.values as string[]) ?? []),
+                ...(extracted.values ?? []),
+              ])
+            ),
+            memories: Array.from(
+              new Set([
+                ...((existing.memories as string[]) ?? []),
+                ...(extracted.memories ?? []),
+              ])
+            ),
+          }
+
           await ctx.prisma.soulProfile.update({
             where: { id: input.soulProfileId },
             data: {
-              personalityJson: JSON.stringify(extracted),
-              memoriesJson: JSON.stringify(extracted.memories),
+              personalityJson: JSON.stringify(merged),
+              memoriesJson: JSON.stringify(merged.memories),
             },
           })
         } catch (error) {
@@ -112,10 +148,10 @@ export const uploadRouter = createTRPCRouter({
         })
       }
 
-      await ctx.prisma.upload.delete({
+      const deleted = await ctx.prisma.upload.delete({
         where: { id: input.id },
       })
 
-      return { success: true }
+      return deleted
     }),
 })
