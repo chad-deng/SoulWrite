@@ -30,6 +30,7 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       update: vi.fn(),
       ...((overrides.schedule as Record<string, unknown>) || {}),
     },
@@ -247,7 +248,7 @@ describe('scheduleRouter', () => {
       }
 
       const prisma = createMockPrisma()
-      prisma.schedule.findFirst.mockResolvedValue(mockSchedule)
+      prisma.schedule.findUnique.mockResolvedValue(mockSchedule)
       prisma.schedule.update.mockResolvedValue(mockUpdated)
 
       const ctx = createMockContext()
@@ -342,7 +343,7 @@ describe('scheduleRouter', () => {
       }
 
       const prisma = createMockPrisma()
-      prisma.schedule.findFirst.mockResolvedValue(mockSchedule)
+      prisma.schedule.findUnique.mockResolvedValue(mockSchedule)
       prisma.schedule.update.mockResolvedValue(mockUpdated)
 
       const ctx = createMockContext()
