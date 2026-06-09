@@ -3,18 +3,10 @@ import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch'
 import superjson from 'superjson'
 import { ZodError } from 'zod'
 import { getServerSession } from 'next-auth/next'
+import type { Session } from 'next-auth'
 
 import { authOptions } from '@/server/auth'
 import { prisma } from '@/server/db'
-
-interface Session {
-  user: {
-    id: string
-    email?: string | null
-    name?: string | null
-    image?: string | null
-  }
-}
 
 interface CreateContextOptions {
   session: Session | null
@@ -29,19 +21,7 @@ export async function createContextInner(opts: CreateContextOptions) {
 
 export async function createContext(_opts: FetchCreateContextFnOptions) {
   const session = await getServerSession(authOptions)
-
-  return createContextInner({
-    session: session
-      ? {
-          user: {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.name,
-            image: session.user.image,
-          },
-        }
-      : null,
-  })
+  return createContextInner({ session })
 }
 
 type Context = Awaited<ReturnType<typeof createContext>>

@@ -5,6 +5,10 @@ import bcrypt from 'bcryptjs'
 
 import { prisma } from '@/server/db'
 
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error('NEXTAUTH_SECRET is not set')
+}
+
 declare module 'next-auth' {
   interface Session {
     user: {
@@ -29,6 +33,7 @@ declare module 'next-auth/jwt' {
 }
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: 'credentials',
