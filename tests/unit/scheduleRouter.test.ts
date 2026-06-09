@@ -296,7 +296,7 @@ describe('scheduleRouter', () => {
       }
 
       const prisma = createMockPrisma()
-      prisma.schedule.findFirst.mockResolvedValue(mockSchedule)
+      prisma.schedule.findUnique.mockResolvedValue(mockSchedule)
 
       const ctx = createMockContext()
       ctx.prisma = prisma as unknown as typeof ctx.prisma
@@ -402,7 +402,7 @@ describe('scheduleRouter', () => {
       }
 
       const prisma = createMockPrisma()
-      prisma.schedule.findFirst.mockResolvedValue(mockSchedule)
+      prisma.schedule.findUnique.mockResolvedValue(mockSchedule)
 
       const ctx = createMockContext()
       ctx.prisma = prisma as unknown as typeof ctx.prisma
