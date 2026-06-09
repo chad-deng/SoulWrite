@@ -1,8 +1,8 @@
 import { createTRPCRouter } from '@/server/api/trpc'
+import { soulProfileRouter } from '@/server/api/routers/soulProfile'
 
 export const appRouter = createTRPCRouter({
-  // Placeholder routers — will be created in later tasks
-  // example: exampleRouter,
+  soulProfile: soulProfileRouter,
 })
 
 export type AppRouter = typeof appRouter
