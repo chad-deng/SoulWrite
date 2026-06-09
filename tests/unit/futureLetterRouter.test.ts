@@ -17,8 +17,11 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
   return {
     futureLetter: {
       create: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
       updateMany: vi.fn(),
+      delete: vi.fn(),
       deleteMany: vi.fn(),
       ...((overrides.futureLetter as Record<string, unknown>) || {}),
     },
@@ -93,7 +96,7 @@ describe('futureLetterRouter', () => {
           content: 'Hello future me',
           deliverAt: '2020-01-01T00:00:00Z',
         })
-      ).rejects.toThrow(TRPCError)
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' })
     })
   })
 
@@ -184,8 +187,20 @@ describe('futureLetterRouter', () => {
 
   describe('markDelivered', () => {
     test('marks letter as delivered for user', async () => {
+      const mockLetter = {
+        id: 'letter-1',
+        userId: 'user-123',
+        content: 'Hello future me',
+        deliverAt: new Date('2099-01-01T00:00:00Z'),
+        isDelivered: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const updatedLetter = { ...mockLetter, isDelivered: true }
+
       const prisma = createMockPrisma()
-      prisma.futureLetter.updateMany.mockResolvedValue({ count: 1 })
+      prisma.futureLetter.findFirst.mockResolvedValue(mockLetter)
+      prisma.futureLetter.update.mockResolvedValue(updatedLetter)
 
       const ctx = createMockContext()
       ctx.prisma = prisma as unknown as typeof ctx.prisma
@@ -193,24 +208,46 @@ describe('futureLetterRouter', () => {
       const caller = futureLetterRouter.createCaller(ctx)
       const result = await caller.markDelivered({ id: 'letter-1' })
 
-      expect(prisma.futureLetter.updateMany).toHaveBeenCalledWith({
-        where: {
-          id: 'letter-1',
-          userId: 'user-123',
-        },
-        data: {
-          isDelivered: true,
-        },
+      expect(prisma.futureLetter.findFirst).toHaveBeenCalledWith({
+        where: { id: 'letter-1', userId: 'user-123' },
       })
+      expect(prisma.futureLetter.update).toHaveBeenCalledWith({
+        where: { id: 'letter-1' },
+        data: { isDelivered: true },
+      })
+      expect(result).toEqual(updatedLetter)
+    })
 
-      expect(result).toEqual({ count: 1 })
+    test('throws NOT_FOUND when letter does not exist', async () => {
+      const prisma = createMockPrisma()
+      prisma.futureLetter.findFirst.mockResolvedValue(null)
+
+      const ctx = createMockContext()
+      ctx.prisma = prisma as unknown as typeof ctx.prisma
+
+      const caller = futureLetterRouter.createCaller(ctx)
+
+      await expect(
+        caller.markDelivered({ id: 'missing-letter' })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     })
   })
 
   describe('delete', () => {
     test('deletes letter for user', async () => {
+      const mockLetter = {
+        id: 'letter-1',
+        userId: 'user-123',
+        content: 'Hello future me',
+        deliverAt: new Date('2099-01-01T00:00:00Z'),
+        isDelivered: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
       const prisma = createMockPrisma()
-      prisma.futureLetter.deleteMany.mockResolvedValue({ count: 1 })
+      prisma.futureLetter.findFirst.mockResolvedValue(mockLetter)
+      prisma.futureLetter.delete.mockResolvedValue(mockLetter)
 
       const ctx = createMockContext()
       ctx.prisma = prisma as unknown as typeof ctx.prisma
@@ -218,14 +255,27 @@ describe('futureLetterRouter', () => {
       const caller = futureLetterRouter.createCaller(ctx)
       const result = await caller.delete({ id: 'letter-1' })
 
-      expect(prisma.futureLetter.deleteMany).toHaveBeenCalledWith({
-        where: {
-          id: 'letter-1',
-          userId: 'user-123',
-        },
+      expect(prisma.futureLetter.findFirst).toHaveBeenCalledWith({
+        where: { id: 'letter-1', userId: 'user-123' },
       })
+      expect(prisma.futureLetter.delete).toHaveBeenCalledWith({
+        where: { id: 'letter-1' },
+      })
+      expect(result).toEqual(mockLetter)
+    })
 
-      expect(result).toEqual({ count: 1 })
+    test('throws NOT_FOUND when letter does not exist', async () => {
+      const prisma = createMockPrisma()
+      prisma.futureLetter.findFirst.mockResolvedValue(null)
+
+      const ctx = createMockContext()
+      ctx.prisma = prisma as unknown as typeof ctx.prisma
+
+      const caller = futureLetterRouter.createCaller(ctx)
+
+      await expect(
+        caller.delete({ id: 'missing-letter' })
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' })
     })
   })
 })

@@ -68,29 +68,29 @@ export const futureLetterRouter = createTRPCRouter({
   markDelivered: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.prisma.futureLetter.updateMany({
-        where: {
-          id: input.id,
-          userId: ctx.session.user.id,
-        },
-        data: {
-          isDelivered: true,
-        },
+      const letter = await ctx.prisma.futureLetter.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
       })
-
-      return { count: result.count }
+      if (!letter) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Future letter not found' })
+      }
+      return ctx.prisma.futureLetter.update({
+        where: { id: input.id },
+        data: { isDelivered: true },
+      })
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.prisma.futureLetter.deleteMany({
-        where: {
-          id: input.id,
-          userId: ctx.session.user.id,
-        },
+      const letter = await ctx.prisma.futureLetter.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
       })
-
-      return { count: result.count }
+      if (!letter) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Future letter not found' })
+      }
+      return ctx.prisma.futureLetter.delete({
+        where: { id: input.id },
+      })
     }),
 })
