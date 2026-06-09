@@ -2,6 +2,30 @@ import { PrismaClient } from '@prisma/client'
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
-export const prisma = globalForPrisma.prisma || new PrismaClient()
+function createPrismaClient(): PrismaClient {
+  return new PrismaClient()
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Lazy-load PrismaClient to avoid instantiation during Next.js build
+// when DATABASE_URL may not be available
+function createLazyPrisma(): PrismaClient {
+  let client: PrismaClient | undefined
+
+  return new Proxy({} as PrismaClient, {
+    get(_, prop) {
+      if (!client) {
+        client = globalForPrisma.prisma || createPrismaClient()
+        if (process.env.NODE_ENV !== 'production') {
+          globalForPrisma.prisma = client
+        }
+      }
+      const value = (client as unknown as Record<string, unknown>)[prop as string]
+      if (typeof value === 'function') {
+        return value.bind(client)
+      }
+      return value
+    },
+  })
+}
+
+export const prisma = createLazyPrisma()

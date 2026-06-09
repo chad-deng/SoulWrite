@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: 'Continue receiving letters from your loved ones'
 }
 
-if (typeof window === 'undefined') {
+if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
   startLetterCron()
 }
 

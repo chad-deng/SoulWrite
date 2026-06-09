@@ -17,6 +17,9 @@ export const soulProfileRouter = createTRPCRouter({
           userId: ctx.session.user.id,
           name: input.name,
           relationship: input.relationship,
+          personalityJson: '{}',
+          memoriesJson: '[]',
+          toneStyle: 'comforting',
         },
       })
 
