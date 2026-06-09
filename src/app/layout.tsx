@@ -2,7 +2,12 @@ import { Geist, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
+import { startLetterCron } from "@/lib/cron"
+
+if (typeof window === "undefined") {
+  startLetterCron()
+}
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'})
 
