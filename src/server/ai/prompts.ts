@@ -19,3 +19,33 @@ Extract the following fields:
 
 Respond ONLY with valid JSON matching this structure. Do not include markdown formatting or explanatory text.`
 }
+
+interface LetterGenerationParams {
+  deceasedName: string
+  relationship: string
+  personalityJson: string
+  tone: string
+  currentContext?: string
+}
+
+export function letterGenerationPrompt(params: LetterGenerationParams): string {
+  const contextSection = params.currentContext
+    ? `\n当前背景/季节：${params.currentContext}`
+    : ''
+
+  return `你是一位擅长模仿逝者语气写信的AI助手。请根据以下信息，以${params.deceasedName}的口吻，给${params.relationship}写一封300-500字的暖心信件。
+
+逝者姓名：${params.deceasedName}
+关系：${params.relationship}
+语气风格：${params.tone}
+个性档案：${params.personalityJson}${contextSection}
+
+写作要求：
+1. 声音必须真实自然，像${params.deceasedName}本人会写的信
+2. 引用个性档案中的共同记忆、口头禅和价值观
+3. 提及当前背景或季节，让信件感觉"现在"就在写
+4. 提供情感支持，安慰收信人
+5. 以爱的表达结尾
+6. 不要提及死亡、AI、超自然或任何非人身份
+7. 只返回信件正文，不要添加任何解释、标题或格式标记`
+}

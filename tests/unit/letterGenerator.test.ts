@@ -1,0 +1,64 @@
+import { describe, test, expect, vi } from 'vitest'
+import { generateLetter, type LetterOutput } from '@/server/ai/letterGenerator'
+
+vi.mock('@/server/ai/openai', () => ({
+  openai: {
+    chat: {
+      completions: {
+        create: vi.fn(),
+      },
+    },
+  },
+}))
+
+import { openai } from '@/server/ai/openai'
+
+const mockedCreate = vi.mocked(openai.chat.completions.create)
+
+describe('generateLetter', () => {
+  test('generates a letter with reality anchor', async () => {
+    const mockLetter = '亲爱的儿子，\n\n最近天气转凉了，记得多加衣服。'
+
+    mockedCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: mockLetter,
+          },
+        },
+      ],
+    } as any)
+
+    const result = await generateLetter({
+      deceasedName: '父亲',
+      relationship: '父子',
+      personalityJson: '{"tone": "warm"}',
+      tone: '温暖',
+      currentContext: '秋天',
+    })
+
+    expect(result.content).toBe(mockLetter)
+    expect(result.tone).toBe('温暖')
+    expect(result.realityAnchor).toBe('这封信来自AI对父亲的记忆重建')
+    expect(mockedCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'gpt-4o',
+        temperature: 0.8,
+        max_tokens: 1200,
+      })
+    )
+  })
+
+  test('throws error when generation fails', async () => {
+    mockedCreate.mockRejectedValueOnce(new Error('API down'))
+
+    await expect(
+      generateLetter({
+        deceasedName: '母亲',
+        relationship: '母子',
+        personalityJson: '{"tone": "gentle"}',
+        tone: '温柔',
+      })
+    ).rejects.toThrow('Failed to generate letter')
+  })
+})
