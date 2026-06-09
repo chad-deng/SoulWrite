@@ -1,33 +1,39 @@
+import { z } from 'zod'
 import { openai } from './openai'
 import { personalityExtractionPrompt } from './prompts'
 
-export interface CommunicationStyle {
-  tone: string
-  sentenceStructure: string
-  vocabularyLevel: string
-}
+export const communicationStyleSchema = z.object({
+  tone: z.string(),
+  sentenceStructure: z.string(),
+  vocabularyLevel: z.string(),
+})
 
-export interface RelationshipDynamics {
-  affectionLevel: string
-  communicationPattern: string
-  insideJokes: string[]
-}
+export const relationshipDynamicsSchema = z.object({
+  affectionLevel: z.string(),
+  communicationPattern: z.string(),
+  insideJokes: z.array(z.string()),
+})
 
-export interface EmotionalPatterns {
-  showsCare: string
-  handlesStress: string
-  sharesJoy: string
-}
+export const emotionalPatternsSchema = z.object({
+  showsCare: z.string(),
+  handlesStress: z.string(),
+  sharesJoy: z.string(),
+})
 
-export interface PersonalityProfile {
-  communicationStyle: CommunicationStyle
-  commonPhrases: string[]
-  frequentTopics: string[]
-  relationshipDynamics: RelationshipDynamics
-  values: string[]
-  emotionalPatterns: EmotionalPatterns
-  memories: string[]
-}
+export const personalityProfileSchema = z.object({
+  communicationStyle: communicationStyleSchema,
+  commonPhrases: z.array(z.string()),
+  frequentTopics: z.array(z.string()),
+  relationshipDynamics: relationshipDynamicsSchema,
+  values: z.array(z.string()),
+  emotionalPatterns: emotionalPatternsSchema,
+  memories: z.array(z.string()),
+})
+
+export type CommunicationStyle = z.infer<typeof communicationStyleSchema>
+export type RelationshipDynamics = z.infer<typeof relationshipDynamicsSchema>
+export type EmotionalPatterns = z.infer<typeof emotionalPatternsSchema>
+export type PersonalityProfile = z.infer<typeof personalityProfileSchema>
 
 export async function extractPersonality(
   name: string,
@@ -47,7 +53,7 @@ export async function extractPersonality(
           content: personalityExtractionPrompt(name, content),
         },
       ],
-      temperature: 0.7,
+      temperature: 0.3,
       response_format: { type: 'json_object' },
     })
 
@@ -56,7 +62,8 @@ export async function extractPersonality(
       throw new Error('Empty response from OpenAI')
     }
 
-    return JSON.parse(raw) as PersonalityProfile
+    const parsed = JSON.parse(raw)
+    return personalityProfileSchema.parse(parsed)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new Error(`Failed to extract personality: ${message}`)

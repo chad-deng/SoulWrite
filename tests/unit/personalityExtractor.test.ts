@@ -55,7 +55,7 @@ describe('extractPersonality', () => {
     expect(mockedCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'gpt-4o',
-        temperature: 0.7,
+        temperature: 0.3,
         response_format: { type: 'json_object' },
       })
     )
@@ -63,6 +63,47 @@ describe('extractPersonality', () => {
 
   test('throws error when API fails', async () => {
     mockedCreate.mockRejectedValueOnce(new Error('API down'))
+
+    await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(
+      'Failed to extract personality'
+    )
+  })
+
+  test('throws error on malformed JSON response', async () => {
+    mockedCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: 'not-valid-json',
+          },
+        },
+      ],
+    } as any)
+
+    await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(
+      'Failed to extract personality'
+    )
+  })
+
+  test('throws error when required fields are missing', async () => {
+    const incompleteProfile = {
+      communicationStyle: {
+        tone: 'warm',
+        sentenceStructure: 'short',
+        vocabularyLevel: 'simple',
+      },
+      // missing commonPhrases, frequentTopics, relationshipDynamics, values, emotionalPatterns, memories
+    }
+
+    mockedCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify(incompleteProfile),
+          },
+        },
+      ],
+    } as any)
 
     await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(
       'Failed to extract personality'
