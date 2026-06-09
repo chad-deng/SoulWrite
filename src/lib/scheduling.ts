@@ -33,6 +33,10 @@ export function calculateNextRun(params: CalculateNextRunParams): Date {
       throw new Error('dayOfMonth is required for monthly frequency')
     }
 
+    if (dayOfMonth < 1 || dayOfMonth > 31) {
+      throw new Error('dayOfMonth must be between 1 and 31')
+    }
+
     const result = new Date(now)
     result.setHours(9, 0, 0, 0)
 
@@ -49,7 +53,9 @@ export function calculateNextRun(params: CalculateNextRunParams): Date {
       throw new Error('specialDate is required for special_date frequency')
     }
 
-    return new Date(specialDate)
+    const result = new Date(specialDate)
+    result.setHours(9, 0, 0, 0)
+    return result
   }
 
   throw new Error(`Unknown frequency: ${frequency}`)

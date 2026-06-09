@@ -85,6 +85,88 @@ describe('calculateNextRun', () => {
       now,
     })
 
-    expect(result.getTime()).toBe(specialDate.getTime())
+    const expected = new Date('2026-12-25T09:00:00')
+    expect(result.getTime()).toBe(expected.getTime())
+  })
+
+  test('when now is the same day as dayOfWeek, returns next week', () => {
+    const now = new Date('2026-06-09T10:00:00') // Tuesday
+    const result = calculateNextRun({
+      frequency: 'weekly',
+      dayOfWeek: 2, // Tuesday
+      now,
+    })
+
+    expect(result.getDay()).toBe(2)
+    const expected = new Date('2026-06-16T09:00:00')
+    expect(result.getTime()).toBe(expected.getTime())
+  })
+
+  test('when now is the same day as dayOfMonth, returns next month', () => {
+    const now = new Date('2026-06-15T10:00:00') // June 15
+    const result = calculateNextRun({
+      frequency: 'monthly',
+      dayOfMonth: 15,
+      now,
+    })
+
+    expect(result.getDate()).toBe(15)
+    expect(result.getMonth()).toBe(6) // July is month 6 (0-indexed)
+    const expected = new Date('2026-07-15T09:00:00')
+    expect(result.getTime()).toBe(expected.getTime())
+  })
+
+  test('throws on unknown frequency', () => {
+    expect(() =>
+      calculateNextRun({
+        frequency: 'daily' as unknown as CalculateNextRunParams['frequency'],
+        now: new Date('2026-06-09T10:00:00'),
+      })
+    ).toThrow('Unknown frequency: daily')
+  })
+
+  test('throws when dayOfWeek is missing for weekly', () => {
+    expect(() =>
+      calculateNextRun({
+        frequency: 'weekly',
+        now: new Date('2026-06-09T10:00:00'),
+      })
+    ).toThrow('dayOfWeek is required for weekly frequency')
+  })
+
+  test('throws when dayOfMonth is missing for monthly', () => {
+    expect(() =>
+      calculateNextRun({
+        frequency: 'monthly',
+        now: new Date('2026-06-09T10:00:00'),
+      })
+    ).toThrow('dayOfMonth is required for monthly frequency')
+  })
+
+  test('throws when specialDate is missing for special_date', () => {
+    expect(() =>
+      calculateNextRun({
+        frequency: 'special_date',
+        now: new Date('2026-06-09T10:00:00'),
+      })
+    ).toThrow('specialDate is required for special_date frequency')
+  })
+
+  test('throws when dayOfMonth is out of range', () => {
+    expect(() =>
+      calculateNextRun({
+        frequency: 'monthly',
+        dayOfMonth: 0,
+        now: new Date('2026-06-09T10:00:00'),
+      })
+    ).toThrow('dayOfMonth must be between 1 and 31')
+
+    expect(() =>
+      calculateNextRun({
+        frequency: 'monthly',
+        dayOfMonth: 32,
+        now: new Date('2026-06-09T10:00:00'),
+      })
+    ).toThrow('dayOfMonth must be between 1 and 31')
   })
 })
