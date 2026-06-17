@@ -2,23 +2,20 @@
 
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
-import { useState, useEffect } from 'react'
 import { LetterCard } from '@/components/LetterCard'
+import { trpc } from '@/trpc/provider'
 
 export default function LettersPage() {
   const { data: session, status } = useSession()
-  const [letters, setLetters] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: letters = [], isLoading, refetch: refetchLetters } = trpc.letter.list.useQuery(undefined, {
+    enabled: !!session,
+  })
 
-  useEffect(() => {
-    if (!session) return
-    fetch('/api/trpc/letter.list')
-      .then((r) => r.json())
-      .then((data) => {
-        setLetters(data.result?.data?.json || [])
-        setLoading(false)
-      })
-  }, [session])
+  const deliverLetter = trpc.letter.deliver.useMutation({
+    onSuccess: () => {
+      refetchLetters()
+    },
+  })
 
   if (status === 'loading') return <div className="p-8">Loading...</div>
   if (!session) redirect('/auth/login')
@@ -27,7 +24,7 @@ export default function LettersPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-bold text-slate-900">Your Letters</h1>
 
-      {loading ? (
+      {isLoading ? (
         <p className="text-slate-600">Loading letters...</p>
       ) : letters.length === 0 ? (
         <div className="rounded-lg border bg-white p-8 text-center">
@@ -39,7 +36,12 @@ export default function LettersPage() {
       ) : (
         <div className="space-y-4">
           {letters.map((letter) => (
-            <LetterCard key={letter.id} letter={letter} />
+            <LetterCard
+              key={letter.id}
+              letter={letter}
+              onDeliver={() => deliverLetter.mutate({ id: letter.id })}
+              isDelivering={deliverLetter.isPending}
+            />
           ))}
         </div>
       )}

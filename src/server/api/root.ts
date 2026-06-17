@@ -4,6 +4,7 @@ import { uploadRouter } from '@/server/api/routers/upload'
 import { letterRouter } from '@/server/api/routers/letter'
 import { scheduleRouter } from '@/server/api/routers/schedule'
 import { futureLetterRouter } from '@/server/api/routers/futureLetter'
+import { lifeUpdateRouter } from '@/server/api/routers/lifeUpdate'
 
 export const appRouter = createTRPCRouter({
   soulProfile: soulProfileRouter,
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   letter: letterRouter,
   schedule: scheduleRouter,
   futureLetter: futureLetterRouter,
+  lifeUpdate: lifeUpdateRouter,
 })
 
 export type AppRouter = typeof appRouter

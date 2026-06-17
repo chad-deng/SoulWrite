@@ -10,6 +10,7 @@ vi.mock('@/server/auth', () => ({
 
 import { describe, test, expect, beforeEach } from 'vitest'
 import { TRPCError } from '@trpc/server'
+import { PrismaClient } from '@prisma/client'
 
 import { futureLetterRouter } from '@/server/api/routers/futureLetter'
 
@@ -38,7 +39,7 @@ function createMockContext(prismaOverrides: Record<string, unknown> = {}) {
       },
       expires: '2099-01-01T00:00:00.000Z',
     },
-    prisma: createMockPrisma(prismaOverrides) as unknown as ReturnType<typeof createMockPrisma>,
+    prisma: createMockPrisma(prismaOverrides) as unknown as PrismaClient,
   }
 }
 

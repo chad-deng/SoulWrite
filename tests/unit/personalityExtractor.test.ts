@@ -1,19 +1,17 @@
 import { describe, test, expect, vi } from 'vitest'
 import { extractPersonality, type PersonalityProfile } from '@/server/ai/personalityExtractor'
 
-vi.mock('@/server/ai/openai', () => ({
-  openai: {
-    chat: {
-      completions: {
-        create: vi.fn(),
-      },
+vi.mock('@/server/ai/anthropic', () => ({
+  anthropic: {
+    messages: {
+      create: vi.fn(),
     },
   },
 }))
 
-import { openai } from '@/server/ai/openai'
+import { anthropic } from '@/server/ai/anthropic'
 
-const mockedCreate = vi.mocked(openai.chat.completions.create)
+const mockedCreate = vi.mocked(anthropic.messages.create)
 
 describe('extractPersonality', () => {
   test('extracts personality from chat content', async () => {
@@ -40,13 +38,7 @@ describe('extractPersonality', () => {
     }
 
     mockedCreate.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify(mockProfile),
-          },
-        },
-      ],
+      content: [{ type: 'text', text: JSON.stringify(mockProfile) }],
     } as any)
 
     const result = await extractPersonality('Alice', 'Alice: hey there! miss you lol')
@@ -54,9 +46,8 @@ describe('extractPersonality', () => {
     expect(result).toEqual(mockProfile)
     expect(mockedCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-4o',
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
       })
     )
   })
@@ -71,13 +62,7 @@ describe('extractPersonality', () => {
 
   test('throws error on malformed JSON response', async () => {
     mockedCreate.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: 'not-valid-json',
-          },
-        },
-      ],
+      content: [{ type: 'text', text: 'not-valid-json' }],
     } as any)
 
     await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(
@@ -96,13 +81,7 @@ describe('extractPersonality', () => {
     }
 
     mockedCreate.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify(incompleteProfile),
-          },
-        },
-      ],
+      content: [{ type: 'text', text: JSON.stringify(incompleteProfile) }],
     } as any)
 
     await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(

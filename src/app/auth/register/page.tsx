@@ -9,6 +9,9 @@ export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [gender, setGender] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [deliveryChannel, setDeliveryChannel] = useState('email')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -21,7 +24,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name, email, password, gender, dateOfBirth, deliveryChannel })
       })
 
       if (!res.ok) {
@@ -79,6 +82,47 @@ export default function RegisterPage() {
             autoComplete="new-password"
             className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Gender</label>
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            required
+            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          >
+            <option value="" disabled>Select gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+            <option value="prefer_not_to_say">Prefer not to say</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Date of Birth</label>
+          <input
+            type="date"
+            value={dateOfBirth}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            required
+            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Delivery Channel</label>
+          <select
+            value={deliveryChannel}
+            onChange={(e) => setDeliveryChannel(e.target.value)}
+            required
+            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          >
+            <option value="email">Email</option>
+            <option value="wechat" disabled>WeChat (coming soon)</option>
+            <option value="dingtalk" disabled>DingTalk (coming soon)</option>
+            <option value="lark" disabled>Lark / Feishu (coming soon)</option>
+            <option value="qq" disabled>QQ (coming soon)</option>
+          </select>
+          <p className="mt-1 text-xs text-slate-500">Only Email is supported right now.</p>
         </div>
         <button
           type="submit"

@@ -3,22 +3,14 @@
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
-import { useState, useEffect } from 'react'
+
+import { trpc } from '@/trpc/provider'
 
 export default function FutureSelfPage() {
   const { data: session, status } = useSession()
-  const [letters, setLetters] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!session) return
-    fetch('/api/trpc/futureLetter.list')
-      .then((r) => r.json())
-      .then((data) => {
-        setLetters(data.result?.data?.json || [])
-        setLoading(false)
-      })
-  }, [session])
+  const { data: letters = [], isLoading } = trpc.futureLetter.list.useQuery(undefined, {
+    enabled: !!session,
+  })
 
   if (status === 'loading') return <div className="p-8">Loading...</div>
   if (!session) redirect('/auth/login')
@@ -35,7 +27,7 @@ export default function FutureSelfPage() {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <p className="text-slate-600">Loading...</p>
       ) : letters.length === 0 ? (
         <div className="rounded-lg border bg-white p-8 text-center">

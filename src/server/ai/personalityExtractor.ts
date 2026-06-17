@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { openai } from './openai'
+import { anthropic } from './anthropic'
 import { personalityExtractionPrompt } from './prompts'
 
 export const communicationStyleSchema = z.object({
@@ -40,26 +40,22 @@ export async function extractPersonality(
   content: string
 ): Promise<PersonalityProfile> {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 4096,
+      system:
+        'You are a personality analysis assistant. Extract structured personality profiles from chat content. Respond with valid JSON only, matching the requested schema exactly.',
       messages: [
-        {
-          role: 'system',
-          content:
-            'You are a personality analysis assistant. Extract structured personality profiles from chat content.',
-        },
         {
           role: 'user',
           content: personalityExtractionPrompt(name, content),
         },
       ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
     })
 
-    const raw = response.choices[0]?.message?.content
+    const raw = response.content[0]?.type === 'text' ? response.content[0].text : ''
     if (!raw) {
-      throw new Error('Empty response from OpenAI')
+      throw new Error('Empty response from Anthropic')
     }
 
     const parsed = JSON.parse(raw)

@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 
-export function LetterCard({ letter }: { letter: any }) {
+interface LetterCardProps {
+  letter: any
+  onDeliver?: () => void
+  isDelivering?: boolean
+}
+
+export function LetterCard({ letter, onDeliver, isDelivering }: LetterCardProps) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -32,12 +38,23 @@ export function LetterCard({ letter }: { letter: any }) {
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-sm text-slate-600 hover:text-slate-900"
-        >
-          {expanded ? 'Show less' : 'Read more'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-sm text-slate-600 hover:text-slate-900"
+          >
+            {expanded ? 'Show less' : 'Read more'}
+          </button>
+          {onDeliver && letter.status !== 'delivered' && (
+            <button
+              onClick={onDeliver}
+              disabled={isDelivering}
+              className="text-sm text-slate-600 hover:text-slate-900 disabled:opacity-50"
+            >
+              {isDelivering ? 'Sending...' : 'Send to email'}
+            </button>
+          )}
+        </div>
         <p className="text-xs text-slate-400 italic">{letter.realityAnchor}</p>
       </div>
     </div>

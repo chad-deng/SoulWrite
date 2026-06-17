@@ -34,7 +34,10 @@ function checkRateLimit(ip: string): boolean {
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  name: z.string().max(100).optional()
+  name: z.string().max(100).optional(),
+  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').transform((value) => new Date(value)),
+  deliveryChannel: z.enum(['email', 'wechat', 'dingtalk', 'lark', 'qq']).default('email'),
 })
 
 export async function POST(req: Request) {
@@ -62,7 +65,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
-    const { email, password, name } = parseResult.data
+    const { email, password, name, gender, dateOfBirth, deliveryChannel } = parseResult.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
@@ -71,7 +74,7 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name: name || null }
+      data: { email, password: hashedPassword, name: name || null, gender, dateOfBirth, deliveryChannel },
     })
 
     return NextResponse.json({ id: user.id, email: user.email }, { status: 201 })

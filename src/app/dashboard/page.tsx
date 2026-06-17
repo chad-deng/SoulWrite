@@ -1,32 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 
-// Simple fetch hook for tRPC without react-query integration for MVP
-function useSoulProfiles() {
-  const { data: session } = useSession()
-  const [profiles, setProfiles] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!session) return
-    fetch('/api/trpc/soulProfile.list')
-      .then((r) => r.json())
-      .then((data) => {
-        setProfiles(data.result?.data?.json || [])
-        setLoading(false)
-      })
-  }, [session])
-
-  return { profiles, loading }
-}
+import { trpc } from '@/trpc/provider'
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
-  const { profiles, loading } = useSoulProfiles()
+  const { data: profiles = [], isLoading } = trpc.soulProfile.list.useQuery(undefined, {
+    enabled: !!session,
+  })
 
   if (status === 'loading') return <div className="p-8">Loading...</div>
   if (!session) redirect('/auth/login')
@@ -43,7 +27,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <p className="text-slate-600">Loading profiles...</p>
       ) : profiles.length === 0 ? (
         <div className="rounded-lg border bg-white p-8 text-center">
@@ -57,7 +41,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {profiles.map((profile: any) => (
+          {profiles.map((profile) => (
             <Link
               key={profile.id}
               href={`/soul-profile/${profile.id}`}

@@ -9,6 +9,8 @@ export const soulProfileRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1).max(100),
         relationship: z.string().min(1).max(50),
+        location: z.string().max(100).optional(),
+        recipientNickname: z.string().max(50).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -17,6 +19,8 @@ export const soulProfileRouter = createTRPCRouter({
           userId: ctx.session.user.id,
           name: input.name,
           relationship: input.relationship,
+          location: input.location,
+          recipientNickname: input.recipientNickname,
           personalityJson: '{}',
           memoriesJson: '[]',
           toneStyle: 'comforting',
@@ -37,6 +41,10 @@ export const soulProfileRouter = createTRPCRouter({
         include: {
           uploads: true,
           schedules: true,
+          lifeUpdates: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
         },
       })
 
@@ -69,6 +77,8 @@ export const soulProfileRouter = createTRPCRouter({
         id: z.string(),
         name: z.string().min(1).max(100).optional(),
         relationship: z.string().min(1).max(50).optional(),
+        location: z.string().max(100).optional(),
+        recipientNickname: z.string().max(50).optional(),
         personalityJson: z.string().refine((s) => {
           try { JSON.parse(s); return true } catch { return false }
         }, { message: 'Must be valid JSON' }).optional(),

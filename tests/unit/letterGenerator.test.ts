@@ -1,32 +1,24 @@
 import { describe, test, expect, vi } from 'vitest'
 import { generateLetter, type LetterOutput } from '@/server/ai/letterGenerator'
 
-vi.mock('@/server/ai/openai', () => ({
-  openai: {
-    chat: {
-      completions: {
-        create: vi.fn(),
-      },
+vi.mock('@/server/ai/anthropic', () => ({
+  anthropic: {
+    messages: {
+      create: vi.fn(),
     },
   },
 }))
 
-import { openai } from '@/server/ai/openai'
+import { anthropic } from '@/server/ai/anthropic'
 
-const mockedCreate = vi.mocked(openai.chat.completions.create)
+const mockedCreate = vi.mocked(anthropic.messages.create)
 
 describe('generateLetter', () => {
   test('generates a letter with reality anchor', async () => {
     const mockLetter = '亲爱的儿子，\n\n最近天气转凉了，记得多加衣服。'
 
     mockedCreate.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: mockLetter,
-          },
-        },
-      ],
+      content: [{ type: 'text', text: mockLetter }],
     } as unknown as Awaited<ReturnType<typeof mockedCreate>>)
 
     const result = await generateLetter({
@@ -42,9 +34,8 @@ describe('generateLetter', () => {
     expect(result.realityAnchor).toBe('这封信来自AI对父亲的记忆重建')
     expect(mockedCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'gpt-4o',
-        temperature: 0.8,
-        max_tokens: 1200,
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
       })
     )
   })
@@ -66,13 +57,7 @@ describe('generateLetter', () => {
     const mockLetter = '亲爱的女儿，\n\n愿你每天都开心。'
 
     mockedCreate.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: mockLetter,
-          },
-        },
-      ],
+      content: [{ type: 'text', text: mockLetter }],
     } as unknown as Awaited<ReturnType<typeof mockedCreate>>)
 
     const result = await generateLetter({

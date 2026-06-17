@@ -1,4 +1,4 @@
-interface CalculateNextRunParams {
+export interface CalculateNextRunParams {
   frequency: 'weekly' | 'monthly' | 'special_date'
   dayOfWeek?: number
   dayOfMonth?: number

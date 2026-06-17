@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { calculateNextRun } from '@/lib/scheduling'
+import { calculateNextRun, type CalculateNextRunParams } from '@/lib/scheduling'
 
 describe('calculateNextRun', () => {
   test('calculates next weekly run', () => {

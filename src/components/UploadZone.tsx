@@ -2,44 +2,39 @@
 
 import { useState } from 'react'
 
+import { trpc } from '@/trpc/provider'
+
 export function UploadZone({ soulProfileId, onUpload }: { soulProfileId: string; onUpload?: () => void }) {
   const [content, setContent] = useState('')
   const [filename, setFilename] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const upload = trpc.upload.create.useMutation({
+    onSuccess: () => {
+      setSuccess('Upload successful! Personality extracted.')
+      setContent('')
+      setFilename('')
+      onUpload?.()
+    },
+    onError: (err) => {
+      setError(err.message)
+    },
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!content.trim()) return
 
-    setLoading(true)
     setError('')
     setSuccess('')
 
-    try {
-      const res = await fetch('/api/trpc/upload.create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          soulProfileId,
-          type: 'text',
-          filename: filename || 'upload.txt',
-          content
-        })
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error.message)
-
-      setSuccess('Upload successful! Personality extracted.')
-      setContent('')
-      setFilename('')
-      onUpload?.()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      setLoading(false)
-    }
+    upload.mutate({
+      soulProfileId,
+      type: 'text',
+      filename: filename || 'upload.txt',
+      content: content.trim(),
+    })
   }
 
   return (
@@ -64,10 +59,10 @@ export function UploadZone({ soulProfileId, onUpload }: { soulProfileId: string;
         />
         <button
           type="submit"
-          disabled={loading || !content.trim()}
+          disabled={upload.isPending || !content.trim()}
           className="w-full rounded bg-slate-900 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
         >
-          {loading ? 'Uploading...' : 'Upload & Extract Personality'}
+          {upload.isPending ? 'Uploading...' : 'Upload & Extract Personality'}
         </button>
       </form>
     </div>

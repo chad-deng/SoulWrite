@@ -1,9 +1,15 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
 function createPrismaClient(): PrismaClient {
-  return new PrismaClient()
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error('DATABASE_URL not configured')
+  }
+  const adapter = new PrismaPg({ connectionString })
+  return new PrismaClient({ adapter })
 }
 
 // Lazy-load PrismaClient to avoid instantiation during Next.js build

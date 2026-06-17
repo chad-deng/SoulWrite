@@ -3,6 +3,8 @@ import { TRPCError } from '@trpc/server'
 
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
 import { generateLetter } from '@/server/ai/letterGenerator'
+import { fetchWeather } from '@/server/ai/weather'
+import { deliverLetter } from '@/server/delivery'
 
 export const letterRouter = createTRPCRouter({
   generateSample: protectedProcedure
@@ -18,6 +20,12 @@ export const letterRouter = createTRPCRouter({
           id: input.soulProfileId,
           userId: ctx.session.user.id,
         },
+        include: {
+          lifeUpdates: {
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+          },
+        },
       })
 
       if (!profile) {
@@ -27,11 +35,19 @@ export const letterRouter = createTRPCRouter({
         })
       }
 
+      const weather = profile.location
+        ? await fetchWeather(profile.location)
+        : null
+
       const letterOutput = await generateLetter({
         deceasedName: profile.name,
         relationship: profile.relationship,
+        recipientNickname: profile.recipientNickname ?? undefined,
         personalityJson: profile.personalityJson,
         tone: input.tone,
+        currentContext: profile.location ?? undefined,
+        weather,
+        recentUpdates: profile.lifeUpdates,
       })
 
       const letter = await ctx.prisma.letter.create({
@@ -122,6 +138,66 @@ export const letterRouter = createTRPCRouter({
         data: {
           status: input.status,
         },
+      })
+
+      return updated
+    }),
+
+  deliver: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const letter = await ctx.prisma.letter.findFirst({
+        where: {
+          id: input.id,
+          userId: ctx.session.user.id,
+        },
+        include: {
+          soulProfile: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      })
+
+      if (!letter) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Letter not found',
+        })
+      }
+
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+      })
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        })
+      }
+
+      try {
+        await deliverLetter({
+          channel: user.deliveryChannel,
+          to: user.email,
+          fromName: letter.soulProfile.name,
+          subject: `A letter from ${letter.soulProfile.name}`,
+          content: letter.content,
+          realityAnchor: letter.realityAnchor,
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to deliver letter: ${message}`,
+        })
+      }
+
+      const updated = await ctx.prisma.letter.update({
+        where: { id: input.id },
+        data: { status: 'delivered' },
       })
 
       return updated

@@ -5,13 +5,23 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 
+import { trpc } from '@/trpc/provider'
+
 export default function WriteFutureSelfPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [content, setContent] = useState('')
   const [deliverAt, setDeliverAt] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const createLetter = trpc.futureLetter.create.useMutation({
+    onSuccess: () => {
+      router.push('/future-self')
+    },
+    onError: (err) => {
+      setError(err.message)
+    },
+  })
 
   if (status === 'loading') return <div className="p-8">Loading...</div>
   if (!session) redirect('/auth/login')
@@ -20,25 +30,10 @@ export default function WriteFutureSelfPage() {
     e.preventDefault()
     if (!content.trim() || !deliverAt) return
 
-    setLoading(true)
     setError('')
-
-    try {
-      const res = await fetch('/api/trpc/futureLetter.create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, deliverAt })
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error.message)
-      router.push('/future-self')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save letter')
-      setLoading(false)
-    }
+    createLetter.mutate({ content: content.trim(), deliverAt: deliverAt })
   }
 
-  // Default to 1 year from now
   const defaultDate = new Date()
   defaultDate.setFullYear(defaultDate.getFullYear() + 1)
   const defaultDateStr = defaultDate.toISOString().slice(0, 16)
@@ -71,10 +66,10 @@ export default function WriteFutureSelfPage() {
         </div>
         <button
           type="submit"
-          disabled={loading || !content.trim()}
+          disabled={createLetter.isPending || !content.trim()}
           className="w-full rounded bg-slate-900 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
         >
-          {loading ? 'Saving...' : 'Schedule Letter'}
+          {createLetter.isPending ? 'Saving...' : 'Schedule Letter'}
         </button>
       </form>
     </div>
