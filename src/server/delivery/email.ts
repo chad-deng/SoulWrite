@@ -65,11 +65,18 @@ export async function sendLetterEmail(params: SendLetterEmailParams): Promise<vo
     </div>
   `
 
-  await transporter.sendMail({
-    from: `"${params.fromName}" <${config.from}>`,
-    to: params.to,
-    subject: params.subject,
-    text: `${params.content}\n\n${params.realityAnchor}`,
-    html,
-  })
+  try {
+    await transporter.sendMail({
+      from: `"${params.fromName}" <${config.from}>`,
+      to: params.to,
+      subject: params.subject,
+      text: `${params.content}\n\n${params.realityAnchor}`,
+      html,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    // eslint-disable-next-line no-console
+    console.error('SMTP send failed:', message, { to: params.to, from: config.from })
+    throw new Error(`SMTP send failed: ${message}`)
+  }
 }
