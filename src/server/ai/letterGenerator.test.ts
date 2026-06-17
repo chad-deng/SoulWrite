@@ -4,10 +4,12 @@ import { generateLetter } from './letterGenerator'
 
 const createMock = vi.fn()
 
-vi.mock('./anthropic', () => ({
-  anthropic: {
-    messages: {
-      create: (...args: unknown[]) => createMock(...args),
+vi.mock('./openai', () => ({
+  openai: {
+    chat: {
+      completions: {
+        create: (...args: unknown[]) => createMock(...args),
+      },
     },
   },
 }))
@@ -19,7 +21,7 @@ describe('generateLetter', () => {
 
   it('returns generated content with tone and reality anchor', async () => {
     createMock.mockResolvedValue({
-      content: [{ type: 'text', text: '亲爱的孩子，今天上海下雨了。' }],
+      choices: [{ message: { content: '亲爱的孩子，今天上海下雨了。' } }],
     })
 
     const result = await generateLetter({
@@ -44,7 +46,7 @@ describe('generateLetter', () => {
   })
 
   it('throws when the model returns empty content', async () => {
-    createMock.mockResolvedValue({ content: [{ type: 'text', text: '' }] })
+    createMock.mockResolvedValue({ choices: [{ message: { content: '' } }] })
 
     await expect(
       generateLetter({

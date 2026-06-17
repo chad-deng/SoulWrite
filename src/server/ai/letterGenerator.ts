@@ -1,4 +1,4 @@
-import { anthropic } from './anthropic'
+import { openai } from './openai'
 import { letterGenerationPrompt } from './prompts'
 import type { WeatherInfo } from './weather'
 
@@ -27,20 +27,24 @@ interface GenerateLetterParams {
 
 export async function generateLetter(params: GenerateLetterParams): Promise<LetterOutput> {
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4096,
-      system:
-        'You are a compassionate letter-writing assistant. Write heartfelt letters in the voice of the described person. Always write in Chinese. End every letter with the provided reality anchor sentence exactly as given.',
+    const response = await openai.chat.completions.create({
+      model: 'mimo-v2.5-pro',
       messages: [
+        {
+          role: 'system',
+          content:
+            'You are a compassionate letter-writing assistant. Write heartfelt letters in the voice of the described person. Always write in Chinese. End every letter with the provided reality anchor sentence exactly as given.',
+        },
         {
           role: 'user',
           content: letterGenerationPrompt(params),
         },
       ],
+      temperature: 0.8,
+      max_tokens: 4096,
     })
 
-    const content = response.content[0]?.type === 'text' ? response.content[0].text : ''
+    const content = response.choices[0]?.message?.content ?? ''
 
     if (!content || content.trim().length === 0) {
       throw new Error('Generated letter is empty')

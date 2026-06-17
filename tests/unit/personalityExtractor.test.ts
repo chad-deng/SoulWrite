@@ -1,17 +1,19 @@
 import { describe, test, expect, vi } from 'vitest'
 import { extractPersonality, type PersonalityProfile } from '@/server/ai/personalityExtractor'
 
-vi.mock('@/server/ai/anthropic', () => ({
-  anthropic: {
-    messages: {
-      create: vi.fn(),
+vi.mock('@/server/ai/openai', () => ({
+  openai: {
+    chat: {
+      completions: {
+        create: vi.fn(),
+      },
     },
   },
 }))
 
-import { anthropic } from '@/server/ai/anthropic'
+import { openai } from '@/server/ai/openai'
 
-const mockedCreate = vi.mocked(anthropic.messages.create)
+const mockedCreate = vi.mocked(openai.chat.completions.create)
 
 describe('extractPersonality', () => {
   test('extracts personality from chat content', async () => {
@@ -38,7 +40,7 @@ describe('extractPersonality', () => {
     }
 
     mockedCreate.mockResolvedValueOnce({
-      content: [{ type: 'text', text: JSON.stringify(mockProfile) }],
+      choices: [{ message: { content: JSON.stringify(mockProfile) } }],
     } as any)
 
     const result = await extractPersonality('Alice', 'Alice: hey there! miss you lol')
@@ -46,7 +48,7 @@ describe('extractPersonality', () => {
     expect(result).toEqual(mockProfile)
     expect(mockedCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'mimo-v2.5-pro',
         max_tokens: 4096,
       })
     )
@@ -62,7 +64,7 @@ describe('extractPersonality', () => {
 
   test('throws error on malformed JSON response', async () => {
     mockedCreate.mockResolvedValueOnce({
-      content: [{ type: 'text', text: 'not-valid-json' }],
+      choices: [{ message: { content: 'not-valid-json' } }],
     } as any)
 
     await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(
@@ -81,7 +83,7 @@ describe('extractPersonality', () => {
     }
 
     mockedCreate.mockResolvedValueOnce({
-      content: [{ type: 'text', text: JSON.stringify(incompleteProfile) }],
+      choices: [{ message: { content: JSON.stringify(incompleteProfile) } }],
     } as any)
 
     await expect(extractPersonality('Alice', 'some content')).rejects.toThrow(
