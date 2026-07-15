@@ -1,5 +1,3 @@
 export function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.NEXT_PHASE !== 'phase-production-build') {
-    import('@/lib/cron').then(({ startLetterCron }) => startLetterCron())
-  }
+  // No server-side cron needed — Vercel Cron Jobs handle scheduling via /api/cron/process-schedules
 }
