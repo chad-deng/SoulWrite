@@ -23,10 +23,10 @@ async function verifyScheduleOwnership(
 const createInputSchema = z
   .object({
     soulProfileId: z.string(),
-    frequency: z.enum(['weekly', 'monthly', 'special_date']),
+    frequency: z.enum(['daily', 'weekly', 'monthly', 'special_date']),
     dayOfWeek: z.number().min(0).max(6).optional(),
     dayOfMonth: z.number().min(1).max(31).optional(),
-    specialDate: z.string().datetime().optional(),
+    specialDate: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -56,11 +56,19 @@ export const scheduleRouter = createTRPCRouter({
         })
       }
 
+      const specialDateParsed = input.specialDate ? new Date(input.specialDate) : undefined
+      if (input.specialDate && specialDateParsed && isNaN(specialDateParsed.getTime())) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid date format for special date',
+        })
+      }
+
       const nextRunAt = calculateNextRun({
         frequency: input.frequency,
         dayOfWeek: input.dayOfWeek,
         dayOfMonth: input.dayOfMonth,
-        specialDate: input.specialDate ? new Date(input.specialDate) : undefined,
+        specialDate: specialDateParsed,
       })
 
       const schedule = await ctx.prisma.schedule.create({
@@ -69,7 +77,7 @@ export const scheduleRouter = createTRPCRouter({
           frequency: input.frequency,
           dayOfWeek: input.dayOfWeek,
           dayOfMonth: input.dayOfMonth,
-          specialDate: input.specialDate ? new Date(input.specialDate) : undefined,
+          specialDate: specialDateParsed,
           nextRunAt,
         },
       })
@@ -118,7 +126,7 @@ export const scheduleRouter = createTRPCRouter({
         ctx.session.user.id
       )
       const nextRunAt = calculateNextRun({
-        frequency: schedule.frequency as 'weekly' | 'monthly' | 'special_date',
+        frequency: schedule.frequency as 'daily' | 'weekly' | 'monthly' | 'special_date',
         dayOfWeek: schedule.dayOfWeek ?? undefined,
         dayOfMonth: schedule.dayOfMonth ?? undefined,
         specialDate: schedule.specialDate ?? undefined,

@@ -1,5 +1,5 @@
 export interface CalculateNextRunParams {
-  frequency: 'weekly' | 'monthly' | 'special_date'
+  frequency: 'daily' | 'weekly' | 'monthly' | 'special_date'
   dayOfWeek?: number
   dayOfMonth?: number
   specialDate?: Date
@@ -8,6 +8,13 @@ export interface CalculateNextRunParams {
 
 export function calculateNextRun(params: CalculateNextRunParams): Date {
   const { frequency, dayOfWeek, dayOfMonth, specialDate, now = new Date() } = params
+
+  if (frequency === 'daily') {
+    const result = new Date(now)
+    result.setHours(9, 0, 0, 0)
+    result.setDate(result.getDate() + 1)
+    return result
+  }
 
   if (frequency === 'weekly') {
     if (dayOfWeek === undefined) {

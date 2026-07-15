@@ -3,9 +3,11 @@
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 import { UploadZone } from '@/components/UploadZone'
+import { PersonalityCard } from '@/components/PersonalityCard'
+import { useFileUpload } from '@/hooks/useFileUpload'
 import { trpc } from '@/trpc/provider'
 
 export default function SoulProfilePage() {
@@ -30,8 +32,11 @@ export default function SoulProfilePage() {
 
   const [updateContent, setUpdateContent] = useState('')
   const [updateImageUrl, setUpdateImageUrl] = useState('')
+  const [updateVideoUrl, setUpdateVideoUrl] = useState('')
+  const updateFileRef = useRef<HTMLInputElement>(null)
+  const { uploadFile, isUploading: isFileUploading } = useFileUpload()
 
-  const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'special_date'>('weekly')
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'special_date'>('weekly')
   const [dayOfWeek, setDayOfWeek] = useState(0)
   const [dayOfMonth, setDayOfMonth] = useState(1)
   const [specialDate, setSpecialDate] = useState('')
@@ -46,6 +51,7 @@ export default function SoulProfilePage() {
     onSuccess: () => {
       setUpdateContent('')
       setUpdateImageUrl('')
+      setUpdateVideoUrl('')
       refetchUpdates()
     },
   })
@@ -53,9 +59,15 @@ export default function SoulProfilePage() {
   const { data: allSchedules = [], refetch: refetchSchedules } =
     trpc.schedule.list.useQuery(undefined, { enabled: !!session })
 
+  const [scheduleError, setScheduleError] = useState('')
+
   const createSchedule = trpc.schedule.create.useMutation({
     onSuccess: () => {
+      setScheduleError('')
       refetchSchedules()
+    },
+    onError: (err) => {
+      setScheduleError(err.message)
     },
   })
 
@@ -106,9 +118,10 @@ export default function SoulProfilePage() {
             <div className="space-y-3">
               <select
                 value={frequency}
-                onChange={(e) => setFrequency(e.target.value as 'weekly' | 'monthly' | 'special_date')}
+                onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly' | 'monthly' | 'special_date')}
                 className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
               >
+                <option value="daily">Every day</option>
                 <option value="weekly">Every week</option>
                 <option value="monthly">Every month</option>
                 <option value="special_date">Special date (e.g. birthday)</option>
@@ -166,6 +179,9 @@ export default function SoulProfilePage() {
               >
                 {createSchedule.isPending ? 'Saving...' : 'Add Schedule'}
               </button>
+              {scheduleError && (
+                <p className="rounded bg-red-50 p-2 text-xs text-red-600">{scheduleError}</p>
+              )}
             </div>
 
             {schedules.length > 0 && (
@@ -210,13 +226,7 @@ export default function SoulProfilePage() {
         <div className="space-y-6">
           <div className="space-y-4">
             <h3 className="font-semibold text-slate-900">Personality</h3>
-            {profile.personalityJson && profile.personalityJson !== '{}' ? (
-              <pre className="rounded bg-slate-100 p-4 text-xs overflow-auto">
-                {JSON.stringify(JSON.parse(profile.personalityJson), null, 2)}
-              </pre>
-            ) : (
-              <p className="text-sm text-slate-600">Upload content to extract personality.</p>
-            )}
+            <PersonalityCard personalityJson={profile.personalityJson} />
           </div>
 
           <div className="space-y-4">
@@ -229,19 +239,58 @@ export default function SoulProfilePage() {
                 className="w-full rounded border border-slate-300 p-3 text-sm focus:border-slate-500 focus:outline-none"
                 rows={3}
               />
-              <input
-                type="url"
-                value={updateImageUrl}
-                onChange={(e) => setUpdateImageUrl(e.target.value)}
-                placeholder="Optional image URL"
-                className="mt-2 w-full rounded border border-slate-300 p-2 text-sm focus:border-slate-500 focus:outline-none"
-              />
+
+              {/* File upload */}
+              <div className="mt-2">
+                <input
+                  ref={updateFileRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    try {
+                      const result = await uploadFile(file)
+                      if (result.contentType.startsWith('video/')) {
+                        setUpdateVideoUrl(result.url)
+                      } else {
+                        setUpdateImageUrl(result.url)
+                      }
+                    } catch { /* error handled in hook */ }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => updateFileRef.current?.click()}
+                  disabled={isFileUploading}
+                  className="w-full rounded border border-dashed border-slate-300 py-2 text-xs text-slate-500 hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {isFileUploading ? 'Uploading...' : '📷 Upload image or video'}
+                </button>
+              </div>
+
+              {/* Preview */}
+              {updateImageUrl && (
+                <div className="mt-2 flex items-center gap-2">
+                  <img src={updateImageUrl} alt="Preview" className="h-16 w-16 rounded object-cover" />
+                  <button type="button" onClick={() => setUpdateImageUrl('')} className="text-xs text-red-500">Remove</button>
+                </div>
+              )}
+              {updateVideoUrl && (
+                <div className="mt-2 flex items-center gap-2">
+                  <video src={updateVideoUrl} className="h-16 w-16 rounded object-cover" />
+                  <button type="button" onClick={() => setUpdateVideoUrl('')} className="text-xs text-red-500">Remove</button>
+                </div>
+              )}
+
               <button
                 onClick={() =>
                   createUpdate.mutate({
                     soulProfileId: profileId,
                     content: updateContent.trim(),
                     imageUrl: updateImageUrl.trim() || undefined,
+                    videoUrl: updateVideoUrl.trim() || undefined,
                   })
                 }
                 disabled={createUpdate.isPending || !updateContent.trim()}
@@ -262,6 +311,13 @@ export default function SoulProfilePage() {
                       src={update.imageUrl}
                       alt="Life update"
                       className="mt-3 max-h-48 rounded object-cover"
+                    />
+                  )}
+                  {update.videoUrl && (
+                    <video
+                      src={update.videoUrl}
+                      controls
+                      className="mt-3 max-h-48 rounded"
                     />
                   )}
                   <p className="mt-2 text-xs text-slate-400">

@@ -2,48 +2,49 @@
 
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 
-interface NavbarProps {}
-
-export function Navbar(_props: NavbarProps) {
+export function Navbar() {
   const { data: session } = useSession()
 
   return (
     <nav aria-label="Main" className="border-b bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <Link href="/" className="text-xl font-bold text-slate-900">
-          GhostWrite
+          SoulWrite
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {session ? (
             <>
-              <Link href="/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
-                Dashboard
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm">Dashboard</Button>
               </Link>
-              <Link href="/letters" className="text-sm text-slate-600 hover:text-slate-900">
-                Letters
+              <Link href="/letters">
+                <Button variant="ghost" size="sm">Letters</Button>
               </Link>
-              <Link href="/future-self" className="text-sm text-slate-600 hover:text-slate-900">
-                Future Self
+              <Link href="/future-self">
+                <Button variant="ghost" size="sm">Future Self</Button>
               </Link>
-              <button
-                type="button"
+              <Link href="/settings">
+                <Button variant="ghost" size="sm">Settings</Button>
+              </Link>
+              <Separator orientation="vertical" className="h-6" />
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="text-sm text-slate-600 hover:text-slate-900"
               >
                 Sign Out
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <Link href="/auth/login" className="text-sm text-slate-600 hover:text-slate-900">
-                Sign In
+              <Link href="/auth/login">
+                <Button variant="ghost" size="sm">Sign In</Button>
               </Link>
-              <Link
-                href="/auth/register"
-                className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-800"
-              >
-                Get Started
+              <Link href="/auth/register">
+                <Button size="sm">Get Started</Button>
               </Link>
             </>
           )}

@@ -2,9 +2,28 @@ import cron from 'node-cron'
 import { prisma } from '@/server/db'
 import { generateLetter } from '@/server/ai/letterGenerator'
 import { calculateNextRun } from '@/lib/scheduling'
+import { deliverLetter } from '@/server/delivery'
 
-const validFrequencies = ['weekly', 'monthly', 'special_date'] as const
+const validFrequencies = ['daily', 'weekly', 'monthly', 'special_date'] as const
 type Frequency = typeof validFrequencies[number]
+
+interface DeliveryContactConfig {
+  webhookUrl?: string
+  webhookSecret?: string
+}
+
+function parseDeliveryContact(json: string | null | undefined): DeliveryContactConfig {
+  if (!json) return {}
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>
+    return {
+      webhookUrl: typeof parsed.webhookUrl === 'string' ? parsed.webhookUrl : undefined,
+      webhookSecret: typeof parsed.webhookSecret === 'string' ? parsed.webhookSecret : undefined,
+    }
+  } catch {
+    return {}
+  }
+}
 
 function isValidFrequency(freq: string): freq is Frequency {
   return validFrequencies.includes(freq as Frequency)
@@ -85,11 +104,33 @@ export function startLetterCron(): void {
         where: {
           isDelivered: false,
           deliverAt: { lte: new Date() }
+        },
+        include: {
+          user: {
+            select: {
+              email: true,
+              deliveryChannel: true,
+              deliveryContactJson: true,
+            }
+          }
         }
       })
 
       for (const futureLetter of deliverableFutureLetters) {
         try {
+          const contactConfig = parseDeliveryContact(futureLetter.user.deliveryContactJson)
+
+          await deliverLetter({
+            channel: futureLetter.user.deliveryChannel,
+            to: futureLetter.user.email,
+            fromName: 'Your Past Self',
+            subject: 'A letter from your past self',
+            content: futureLetter.content,
+            realityAnchor: 'Written by you, delivered as promised.',
+            webhookUrl: contactConfig.webhookUrl,
+            webhookSecret: contactConfig.webhookSecret,
+          })
+
           await prisma.futureLetter.update({
             where: { id: futureLetter.id },
             data: { isDelivered: true }

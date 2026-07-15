@@ -117,12 +117,12 @@ export default function RegisterPage() {
             className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
           >
             <option value="email">Email</option>
+            <option value="dingtalk">DingTalk</option>
+            <option value="lark">Lark / Feishu</option>
             <option value="wechat" disabled>WeChat (coming soon)</option>
-            <option value="dingtalk" disabled>DingTalk (coming soon)</option>
-            <option value="lark" disabled>Lark / Feishu (coming soon)</option>
             <option value="qq" disabled>QQ (coming soon)</option>
           </select>
-          <p className="mt-1 text-xs text-slate-500">Only Email is supported right now.</p>
+          <p className="mt-1 text-xs text-slate-500">You can configure webhook URL in Settings after registration.</p>
         </div>
         <button
           type="submit"

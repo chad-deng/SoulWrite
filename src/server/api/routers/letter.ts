@@ -6,6 +6,24 @@ import { generateLetter } from '@/server/ai/letterGenerator'
 import { fetchWeather } from '@/server/ai/weather'
 import { deliverLetter } from '@/server/delivery'
 
+interface DeliveryContactConfig {
+  webhookUrl?: string
+  webhookSecret?: string
+}
+
+function parseDeliveryContact(json: string | null | undefined): DeliveryContactConfig {
+  if (!json) return {}
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>
+    return {
+      webhookUrl: typeof parsed.webhookUrl === 'string' ? parsed.webhookUrl : undefined,
+      webhookSecret: typeof parsed.webhookSecret === 'string' ? parsed.webhookSecret : undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
 export const letterRouter = createTRPCRouter({
   generateSample: protectedProcedure
     .input(
@@ -178,6 +196,8 @@ export const letterRouter = createTRPCRouter({
         })
       }
 
+      const contactConfig = parseDeliveryContact(user.deliveryContactJson)
+
       try {
         await deliverLetter({
           channel: user.deliveryChannel,
@@ -186,6 +206,8 @@ export const letterRouter = createTRPCRouter({
           subject: `A letter from ${letter.soulProfile.name}`,
           content: letter.content,
           realityAnchor: letter.realityAnchor,
+          webhookUrl: contactConfig.webhookUrl,
+          webhookSecret: contactConfig.webhookSecret,
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -197,9 +219,62 @@ export const letterRouter = createTRPCRouter({
 
       const updated = await ctx.prisma.letter.update({
         where: { id: input.id },
-        data: { status: 'delivered' },
+        data: { status: 'delivered', deliveredAt: new Date() },
       })
 
       return updated
+    }),
+
+  getDeliverySettings: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.prisma.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: { deliveryChannel: true, deliveryContactJson: true },
+    })
+
+    if (!user) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' })
+    }
+
+    const config = parseDeliveryContact(user.deliveryContactJson)
+    return {
+      channel: user.deliveryChannel,
+      webhookUrl: config.webhookUrl ?? '',
+      webhookSecret: config.webhookSecret ?? '',
+    }
+  }),
+
+  updateDeliverySettings: protectedProcedure
+    .input(
+      z.object({
+        channel: z.enum(['email', 'dingtalk', 'lark']),
+        webhookUrl: z.string().url().optional(),
+        webhookSecret: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if ((input.channel === 'dingtalk' || input.channel === 'lark') && !input.webhookUrl) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Webhook URL is required for DingTalk and Feishu channels',
+        })
+      }
+
+      const contactJson =
+        input.channel === 'email'
+          ? null
+          : JSON.stringify({
+              webhookUrl: input.webhookUrl,
+              webhookSecret: input.webhookSecret,
+            })
+
+      const updated = await ctx.prisma.user.update({
+        where: { id: ctx.session.user.id },
+        data: {
+          deliveryChannel: input.channel,
+          deliveryContactJson: contactJson,
+        },
+      })
+
+      return { channel: updated.deliveryChannel }
     }),
 })

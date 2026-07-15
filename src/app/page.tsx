@@ -7,7 +7,7 @@ export default function HomePage() {
         Letters from the ones you miss
       </h1>
       <p className="mb-8 text-lg text-slate-600">
-        GhostWrite uses AI to capture the voice of your loved ones and continue
+        SoulWrite uses AI to capture the voice of your loved ones and continue
         the conversation — with care, memory, and a gentle reality anchor.
       </p>
       <div className="flex justify-center gap-4">

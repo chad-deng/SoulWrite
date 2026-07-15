@@ -479,6 +479,7 @@ describe('letterRouter', () => {
         },
         data: {
           status: 'delivered',
+          deliveredAt: expect.any(Date),
         },
       })
 

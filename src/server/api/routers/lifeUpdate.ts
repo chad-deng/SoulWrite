@@ -10,6 +10,7 @@ export const lifeUpdateRouter = createTRPCRouter({
         soulProfileId: z.string(),
         content: z.string().min(1).max(5000),
         imageUrl: z.string().url().optional(),
+        videoUrl: z.string().url().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -32,6 +33,7 @@ export const lifeUpdateRouter = createTRPCRouter({
           soulProfileId: input.soulProfileId,
           content: input.content,
           imageUrl: input.imageUrl,
+          videoUrl: input.videoUrl,
         },
       })
 

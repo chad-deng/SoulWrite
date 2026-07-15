@@ -116,13 +116,22 @@ describe('calculateNextRun', () => {
     expect(result.getTime()).toBe(expected.getTime())
   })
 
+  test('calculates next daily run as tomorrow at 9am', () => {
+    const result = calculateNextRun({
+      frequency: 'daily',
+      now: new Date('2026-06-09T10:00:00'),
+    })
+    const expected = new Date('2026-06-10T09:00:00')
+    expect(result.getTime()).toBe(expected.getTime())
+  })
+
   test('throws on unknown frequency', () => {
     expect(() =>
       calculateNextRun({
-        frequency: 'daily' as unknown as CalculateNextRunParams['frequency'],
+        frequency: 'hourly' as unknown as CalculateNextRunParams['frequency'],
         now: new Date('2026-06-09T10:00:00'),
       })
-    ).toThrow('Unknown frequency: daily')
+    ).toThrow('Unknown frequency: hourly')
   })
 
   test('throws when dayOfWeek is missing for weekly', () => {
